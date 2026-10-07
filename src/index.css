@@ -1,0 +1,278 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --brand: #002554;
+    --brand-deep: #001a3d;
+    --accent: #2dd4bf;
+    --surface-top: #000000;
+    --surface-bottom: #000000;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  html {
+    /* Base um pouco maior: o produto é de acessibilidade e os textos estavam pequenos */
+    font-size: 106.25%;
+    background-color: var(--surface-bottom);
+  }
+
+  body {
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow: hidden;
+    background: linear-gradient(165deg, var(--surface-top) 0%, var(--surface-bottom) 100%) fixed;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5 {
+    font-family: theme('fontFamily.display');
+  }
+
+  header {
+    min-height: 54px;
+  }
+
+  /* Foco visível e consistente em toda a interface */
+  :focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* Desativa o botão de revelar senha nativo do Edge/Windows */
+  input::-ms-reveal,
+  input::-ms-clear {
+    display: none !important;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Textos minúsculos (8–13px) sobem para um mínimo legível em tela pequena e de baixa resolução */
+.text-\[8px\],
+.text-\[9px\],
+.text-\[10px\],
+.text-\[11px\] { font-size: 0.8125rem; line-height: 1.2rem; }
+.text-\[12px\] { font-size: 0.875rem; line-height: 1.3rem; }
+.text-\[13px\] { font-size: 0.9375rem; line-height: 1.4rem; }
+
+/* Textos secundários esmaecidos por transparência ficavam ilegíveis: opacidade menor, cor mais firme */
+.opacity-60 { opacity: 0.85; }
+.opacity-70 { opacity: 0.88; }
+.opacity-75 { opacity: 0.9; }
+.opacity-80 { opacity: 0.92; }
+
+.text-slate-400:not([class*='bg-slate-9'] *),
+.text-slate-500:not([class*='bg-slate-9'] *) { color: #475569; }
+.text-slate-600:not([class*='bg-slate-9'] *) { color: #334155; }
+
+/* alto contraste: sem cinza e sem transparência no texto; tudo azul ou amarelo */
+.hc .text-slate-300,
+.hc .text-slate-400,
+.hc .text-slate-500,
+.hc .text-slate-600,
+.hc .text-slate-700 { color: #0000ff !important; }
+.hc .opacity-60,
+.hc .opacity-70,
+.hc .opacity-75,
+.hc .opacity-80,
+.hc .opacity-85,
+.hc .opacity-90 { opacity: 1 !important; }
+.hc .tree-row > .ml-auto { opacity: 1 !important; }
+
+/* Opção B: cada seção abre com uma faixa de largura total (o primeiro filho do bloco) e uma régua escura embaixo */
+.section-card > :first-child {
+  margin: -1.25rem -1.25rem 1.25rem;
+  padding: 0.9rem 1.25rem;
+  background: var(--strip-bg, #e2e5ea);
+  border-bottom: 3px solid var(--strip-ink, #111827);
+  border-radius: 0;
+}
+
+@media (min-width: 640px) {
+  .section-card > :first-child {
+    margin: -1.75rem -1.75rem 1.5rem;
+    padding: 1rem 1.75rem;
+  }
+}
+
+/* cartão recolhido (só o cabeçalho): cancela o respiro de baixo para não sobrar faixa vazia */
+.section-card > :first-child:only-child {
+  margin-bottom: -1.25rem;
+}
+
+@media (min-width: 640px) {
+  .section-card > :first-child:only-child {
+    margin-bottom: -1.75rem;
+  }
+}
+
+/* alto contraste: textos da faixa (exceto botões) ficam amarelos sobre o azul */
+.section-card-hc > :first-child :not(button, button *, .inline-flex.rounded-xl, .inline-flex.rounded-xl *) {
+  color: #ffff00 !important;
+  opacity: 1 !important;
+}
+
+/* botões azuis sobre a faixa azul: contorno amarelo para não sumirem */
+.section-card-hc > :first-child button:not(.inline-flex.rounded-xl button) {
+  box-shadow: inset 0 0 0 2px #ffff00;
+}
+
+/* título da seção dentro da faixa: chip com a cor da seção e nome forte */
+main h2.uppercase,
+main h3.uppercase {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: 1.1875rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1.25;
+  text-transform: none;
+  color: var(--strip-fg, #111827);
+  opacity: 1 !important;
+}
+
+/* Barra de rolagem discreta */
+main {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 37, 84, 0.25) transparent;
+}
+
+@keyframes profileFloatDown {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-profile-float {
+  animation: profileFloatDown 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Árvore de configurações (opção B): categoria em faixa, conteúdo aberto, divisórias finas, linhas de ligação e caixas + / − */
+.tree-root,
+.tree-node {
+  position: relative;
+}
+
+/* cabeçalho da categoria: faixa com linhas finas; régua escura quando aberta */
+.tree-root > button.tree-row,
+.tree-root > div.tree-row {
+  width: 100%;
+  min-height: 3.25rem;
+  padding: 0 0.75rem;
+  background: var(--tree-strip-bg, #eceef2);
+  color: var(--tree-strip-fg, #111827);
+  border-top: 2px solid var(--tree-ink, #111827);
+  border-bottom: 2px solid var(--tree-ink, #111827);
+}
+
+
+.tree-root > .tree-children {
+  margin-left: 0;
+  padding: 0.35rem 0.75rem 0.5rem;
+}
+
+.tree-root > .tree-body {
+  padding: 0.5rem 0.75rem 1rem 2.5rem;
+}
+
+.tree-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: var(--tree-row-h, 2.75rem);
+}
+
+.tree-children {
+  margin-left: 0.6rem;
+}
+
+.tree-node {
+  padding-left: 1.6rem;
+}
+
+/* divisória fina entre irmãos */
+.tree-children > .tree-node + .tree-node {
+  border-top: 1px solid var(--tree-divider, #b8bfca);
+}
+
+.tree-node::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-left: 1px dotted var(--tree-line, #6b7280);
+}
+
+.tree-node:last-child::before {
+  bottom: auto;
+  height: calc(var(--tree-row-h, 2.75rem) / 2);
+}
+
+.tree-node::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: calc(var(--tree-row-h, 2.75rem) / 2);
+  width: 1.2rem;
+  border-top: 1px dotted var(--tree-line, #6b7280);
+}
+
+.tree-body {
+  padding: 0.15rem 0 0.9rem 1.6rem;
+}
+
+.tree-toggle {
+  display: inline-flex;
+  width: 1.125rem;
+  height: 1.125rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #111827;
+  border-radius: 0.2rem;
+  background: #fff;
+  color: #111827;
+}
+
+/* Textos secundários da árvore (resumo e "Em definição"): sempre acima de 4,5:1 */
+.tree-row > .ml-auto {
+  opacity: 0.8 !important;
+}
+
+/* paisagem: botões das seções de usuários e aplicativos não quebram o texto em duas linhas */
+@media (orientation: landscape) {
+  #section-users button,
+  #section-apps button {
+    white-space: nowrap;
+  }
+}
