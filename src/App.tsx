@@ -26,6 +26,7 @@ import {
 import type { Option, User } from './types'
 import type { ProfileModoProvaConfig, ProfileModoSalaConfig } from './types'
 import InfoTip from './components/InfoTip'
+import { useModalFocus } from './hooks/useModalFocus'
 import AppToggleButton from './components/AppToggleButton'
 import {
   getLevel, ROOT_MENU_ITEM_IDS, APPS_LIBERADOS_IDS, DEFAULT_MENU_ACCESS,
@@ -388,6 +389,25 @@ export default function App() {
     }
     return level.header
   })()
+  // Nome do menu para leitores de tela e linha braille (o cabeçalho do visor vem sem acento e em minúsculas)
+  const menuAccessibleName = (() => {
+    if (level.title) return level.title
+    if (current.id === 'root') return 'Menu principal'
+    const plain = headerText.replace(/^\./, '')
+    const ACENTOS: Record<string, string> = {
+      configuracoes: 'Configurações',
+      'gerenciador de usuarios': 'Gerenciador de usuários',
+      'criar usuario': 'Criar usuário',
+      'editar usuario': 'Editar usuário',
+      'listar usuarios': 'Listar usuários',
+      'selecionar usuario': 'Selecionar usuário',
+      'definir permissoes': 'Definir permissões',
+      'confirmar criacao': 'Confirmar criação',
+      'modo adm': 'Modo ADM'
+    }
+    if (ACENTOS[plain]) return ACENTOS[plain]
+    return plain ? plain.charAt(0).toUpperCase() + plain.slice(1) : 'Menu'
+  })()
   const dynamicOptions: Option[] = (() => {
     const settingsDynamic = getDynamicSettingsOptions(current.id, settingsValues, {
       btSearching,
@@ -509,7 +529,7 @@ export default function App() {
     return currentUser.menuAccess[opt.id] ?? false
   })
   const options = dynamicOptions.length > 0 ? dynamicOptions : (current.id === 'root' ? rootOptions : level.options)
-  const navRef = useRef<HTMLElement | null>(null)
+  const navRef = useRef<HTMLDivElement | null>(null)
   const activeOptionRef = useRef<HTMLDivElement | null>(null)
 
 
@@ -540,6 +560,17 @@ export default function App() {
     }
   }, [authRequested, loginStage])
 
+  // Leitor de tela: o foco acompanha o menu do dispositivo e o aviso aberto
+  useEffect(() => {
+    if (authRequested) return
+    const el = document.getElementById(popupMessage ? 'device-popup' : 'device-menu')
+    el?.focus()
+  }, [current.id, popupMessage, authRequested])
+
+  const exitDialogRef = useModalFocus<HTMLDivElement>(showExitModal, () => setShowExitModal(false))
+  const createUserDialogRef = useModalFocus<HTMLDivElement>(showCreateUserModal, () => setShowCreateUserModal(false))
+  const factoryResetDialogRef = useModalFocus<HTMLDivElement>(showFactoryResetModal, () => setShowFactoryResetModal(false))
+
   useEffect(() => {
     if (popupMessage) {
       if (popupTimeoutRef.current) {
@@ -548,7 +579,7 @@ export default function App() {
       popupTimeoutRef.current = window.setTimeout(() => {
         setPopupMessage('')
         popupTimeoutRef.current = null
-      }, 5000)
+      }, 15000)
       return () => {
         if (popupTimeoutRef.current) {
           window.clearTimeout(popupTimeoutRef.current)
@@ -1718,8 +1749,8 @@ export default function App() {
       <div style={deviceColorStyle} className="w-screen h-screen bg-[color:var(--dev-bg)] font-sans font-bold text-[color:var(--dev-fg)] flex flex-col">
         <main className="flex-grow px-4 py-6 flex items-center justify-center">
           <div className="w-full max-w-xl bg-black/80 p-6 sm:p-8 rounded-sm text-white">
-            <div className="text-xs uppercase tracking-[0.2em] opacity-70">Acesso Modo ADM</div>
-            <div className="mt-1 mb-5 text-2xl">{isPasswordStep ? 'Digite sua senha' : 'Digite seu usuário'}</div>
+            <h1 className="text-xs uppercase tracking-[0.2em] opacity-70">Acesso Modo ADM</h1>
+            <h2 className="mt-1 mb-5 text-2xl">{isPasswordStep ? 'Digite sua senha' : 'Digite seu usuário'}</h2>
 
             {isPasswordStep && (
               <div className="mb-4 flex items-center justify-between gap-3 rounded-sm border border-white/30 px-4 py-3">
@@ -1740,7 +1771,9 @@ export default function App() {
             <input
               key={loginStage}
               ref={loginUserRef}
-              aria-label={isPasswordStep ? 'Senha' : 'Usuário'}
+              aria-label={isPasswordStep ? `Senha do usuário ${loginUser}` : 'Usuário'}
+              aria-describedby={loginError ? 'login-error login-hint' : 'login-hint'}
+              aria-invalid={loginError ? true : undefined}
               value={isPasswordStep ? loginPassword : loginUser}
               onChange={e => {
                 if (isPasswordStep) setLoginPassword(e.target.value)
@@ -1778,10 +1811,10 @@ export default function App() {
                 {isPasswordStep ? 'Voltar' : 'Cancelar'}
               </button>
             </div>
-            <p className="mt-3 text-xs opacity-60">Enter confirma · Esc {isPasswordStep ? 'volta ao usuário' : 'cancela'}</p>
+            <p id="login-hint" className="mt-3 text-xs opacity-60">Enter confirma · Esc {isPasswordStep ? 'volta ao usuário' : 'cancela'}</p>
 
             {loginError ? (
-              <p className="mt-3 text-sm text-red-400">{loginError}</p>
+              <p id="login-error" role="alert" className="mt-3 text-sm text-red-400">{loginError}</p>
             ) : null}
           </div>
         </main>
@@ -2258,18 +2291,40 @@ export default function App() {
 
     return (
       <div className={`flex h-screen w-screen font-sans ${themeStyles.bg} transition-colors duration-150 overflow-hidden`}>
+        <a
+          href="#conteudo-principal"
+          onClick={e => {
+            e.preventDefault()
+            document.getElementById('conteudo-principal')?.focus()
+          }}
+          className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-[70] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-bold focus:text-[#111827] focus:ring-2 focus:ring-[#111827]"
+        >
+          Ir para o conteúdo
+        </a>
+
+        {/* Avisos do painel: anunciados por leitores de tela e visíveis para todos */}
+        <div role="status" aria-live="polite" aria-atomic="true">
+          {popupMessage && (
+            <div className={`fixed bottom-4 left-1/2 z-[60] flex w-[min(92vw,28rem)] -translate-x-1/2 items-center gap-3 border-2 px-4 py-3 text-sm font-semibold shadow-xl ${isHighContrast ? 'border-[#0000FF] bg-[#FFFF00] text-[#0000FF]' : 'rounded-xl border-[#111827] bg-white text-[#111827]'}`}>
+              <span className="min-w-0 flex-1">{popupMessage}</span>
+              <button type="button" onClick={() => setPopupMessage('')} aria-label="Fechar aviso" className="shrink-0 rounded-md border border-current px-2 py-1 text-xs font-bold">Fechar</button>
+            </div>
+          )}
+        </div>
+
         {/* Área Principal */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Header Superior com Sticky Controls ao Rolar */}
           <header className={`px-4 sm:px-6 md:px-10 py-3 border-b flex items-center justify-between gap-2 sm:gap-4 ${themeStyles.header} z-20 sticky top-0 transition-colors min-h-[60px] sm:min-h-[68px]`}>
             {/* Lado Esquerdo: Título + Perfil Ativo Fixo */}
             <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-shrink">
-              <span className="text-sm md:text-base font-bold font-display tracking-tight opacity-90 hidden xl:inline flex-shrink-0">
+              <h1 className="sr-only xl:not-sr-only text-sm md:text-base font-bold font-display tracking-tight opacity-90 flex-shrink-0">
                 Painel Administrativo
-              </span>
+              </h1>
 
               {/* Perfil Ativo Fixo no Header ao rolar para baixo com animação */}
               <div
+                aria-hidden="true"
                 onClick={() => scrollToSection('section-quick-actions', 'quickActions')}
                 className={`flex items-center space-x-2 px-2 sm:px-2.5 py-1 border cursor-pointer transition-all duration-300 transform flex-shrink min-w-0 ${isStickyProfileVisible
                   ? 'opacity-100 translate-y-0 scale-100 pointer-events-auto shadow-xs animate-profile-float'
@@ -2308,12 +2363,13 @@ export default function App() {
               {/* Botões Rápidos Fixos no Header (Wi-Fi, Bluetooth e Contraste) */}
               <div className={`flex items-center space-x-1 sm:space-x-1.5 transition-all duration-300 transform flex-shrink-0 ${isStickyQuickActionsVisible
                 ? 'opacity-100 translate-y-0 scale-100 pointer-events-auto animate-profile-float'
-                : 'opacity-0 -translate-y-3 scale-95 pointer-events-none'
+                : 'invisible opacity-0 -translate-y-3 scale-95 pointer-events-none'
                 }`}>
                 {/* Botão Wi-Fi no Header */}
                 <button
                   onClick={toggleWifi}
-                  aria-label="Alternar Wi-Fi"
+                  aria-label="Wi-Fi"
+                  aria-pressed={isWifiOn}
                   title={isWifiOn ? "Wi-Fi Ligado" : "Wi-Fi Desligado"}
                   className={`w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 border flex items-center justify-center transition-all ${isWifiOn
                     ? (isHighContrast ? 'bg-[#0000FF] text-[#FFFF00] border-[#FFFF00]' : 'bg-emerald-500 text-white border-emerald-600')
@@ -2326,7 +2382,8 @@ export default function App() {
                 {/* Botão Bluetooth no Header */}
                 <button
                   onClick={toggleBluetooth}
-                  aria-label="Alternar Bluetooth"
+                  aria-label="Bluetooth"
+                  aria-pressed={isBtOn}
                   title={isBtOn ? "Bluetooth Ligado" : "Bluetooth Desligado"}
                   className={`w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 border flex items-center justify-center transition-all ${isBtOn
                     ? (isHighContrast ? 'bg-[#0000FF] text-[#FFFF00] border-[#FFFF00]' : 'bg-blue-600 text-white border-blue-700')
@@ -2339,7 +2396,8 @@ export default function App() {
                 {/* Botão Contraste no Header */}
                 <button
                   onClick={toggleContrastTheme}
-                  aria-label="Alternar Alto Contraste"
+                  aria-label="Alto contraste"
+                  aria-pressed={isHighContrast}
                   title={isHighContrast ? "Desativar Alto Contraste" : "Ativar Alto Contraste"}
                   className={`w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 border flex items-center justify-center transition-all ${isHighContrast
                     ? 'bg-[#FFFF00] text-[#0000FF] border-[#0000FF]'
@@ -2378,6 +2436,8 @@ export default function App() {
 
           {/* Conteúdo Rolável Contínuo (Scroll-to-Section) */}
           <main
+          id="conteudo-principal"
+          tabIndex={-1}
             ref={mainScrollRef}
             onScroll={handleScrollSpy}
             className="flex-1 overflow-y-auto px-0 py-4 sm:p-6 lg:p-10 pb-28 scroll-smooth min-w-0"
@@ -2521,6 +2581,8 @@ export default function App() {
                       return (
                         <button
                           key={profile.id}
+                          type="button"
+                          aria-pressed={isActive}
                           onClick={() => applyDisabilityProfile(profile.id)}
                           className={`p-3 sm:p-4 rounded-2xl border flex flex-col items-center justify-center text-center transition-all duration-200 hover:-translate-y-1 hover:shadow-md ${isActive
                             ? (isHighContrast
@@ -2534,7 +2596,8 @@ export default function App() {
                           <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 flex items-center justify-center mb-2">
                             <img
                               src={profile.icon}
-                              alt={profile.name}
+                              alt=""
+                              aria-hidden="true"
                               className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 object-contain"
                               onError={(e) => { e.currentTarget.style.display = 'none' }}
                             />
@@ -2650,6 +2713,8 @@ export default function App() {
                             <button
                               type="button"
                               onClick={() => setIsUsersExpanded(prev => !prev)}
+                              aria-expanded={isUsersExpanded}
+                              aria-controls="section-users"
                               className={`flex items-center space-x-1.5 px-3 py-2 text-xs font-bold border rounded-xl transition-all ${
                                 isHighContrast
                                   ? 'border-[#0000FF] bg-[#FFFF00] text-[#0000FF] hover:bg-[#0000FF] hover:text-[#FFFF00]'
@@ -2672,12 +2737,13 @@ export default function App() {
                             {/* Tabela de Usuários */}
                             <div className="overflow-hidden border border-inherit">
                               <table className="w-full text-left text-xs">
+                                <caption className="sr-only">Usuários cadastrados. Selecione o nome para configurar os aplicativos do usuário.</caption>
                                 <thead className="bg-slate-50/60 uppercase text-[10px] font-bold tracking-wider opacity-75 border-b border-inherit">
                                   <tr>
-                                    <th className="px-4 py-3">Nome</th>
-                                    <th className="px-4 py-3">Perfil</th>
-                                    <th className="px-4 py-3">Apps Liberados</th>
-                                    <th className="px-4 py-3 text-right">Ações</th>
+                                    <th scope="col" className="px-4 py-3">Nome</th>
+                                    <th scope="col" className="px-4 py-3">Perfil</th>
+                                    <th scope="col" className="px-4 py-3">Apps Liberados</th>
+                                    <th scope="col" className="px-4 py-3 text-right">Ações</th>
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-inherit">
@@ -2710,7 +2776,7 @@ export default function App() {
                                                 }`}>
                                                 {u.name.charAt(0).toUpperCase()}
                                               </div>
-                                              <span>{u.name}</span>
+                                              <button type="button" aria-pressed={isSelected} className="text-left font-inherit">{u.name}</button>
                                               {isSelected && (
                                                 <span className={`text-[9px] px-1.5 py-0.5 uppercase font-black ${isHighContrast ? 'bg-[#FFFF00] text-[#0000FF]' : 'bg-[#002554] text-white'
                                                   }`}>
@@ -2745,6 +2811,7 @@ export default function App() {
                                                 setEditUserTab('standard')
                                                 setUserManagementView('edit')
                                               }}
+                                              aria-label={`Editar ${u.name}`}
                                               className="px-2.5 py-1 border border-inherit font-bold hover:bg-slate-50"
                                             >
                                               Editar
@@ -2800,6 +2867,7 @@ export default function App() {
                                       <div className="inline-flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 flex-nowrap portrait:flex-wrap gap-1 shadow-xs">
                                         <button
                                           type="button"
+                                          aria-pressed={customUserConfigTab === 'standard'}
                                           onClick={() => setCustomUserConfigTab('standard')}
                                           className={`flex items-center space-x-2 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
                                             customUserConfigTab === 'standard'
@@ -2813,6 +2881,7 @@ export default function App() {
 
                                         <button
                                           type="button"
+                                          aria-pressed={customUserConfigTab === 'modoProva'}
                                           onClick={() => setCustomUserConfigTab('modoProva')}
                                           className={`flex items-center space-x-2 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
                                             customUserConfigTab === 'modoProva'
@@ -2826,6 +2895,7 @@ export default function App() {
 
                                         <button
                                           type="button"
+                                          aria-pressed={customUserConfigTab === 'modoSala'}
                                           onClick={() => setCustomUserConfigTab('modoSala')}
                                           className={`flex items-center space-x-2 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
                                             customUserConfigTab === 'modoSala'
@@ -3012,8 +3082,8 @@ export default function App() {
 
                               <div className="space-y-4 max-w-2xl">
                                 <div>
-                                  <label className="block text-xs font-bold uppercase opacity-80 mb-1">Nome do Usuário</label>
-                                  <input
+                                  <label htmlFor="fld-1" className="block text-xs font-bold uppercase opacity-80 mb-1">Nome do Usuário</label>
+                                  <input id="fld-1"
                                     type="text"
                                     value={editName}
                                     onChange={e => setEditName(e.target.value)}
@@ -3023,9 +3093,9 @@ export default function App() {
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                   <div>
-                                    <label className="block text-xs font-bold uppercase opacity-80 mb-1">Nova Senha (opcional)</label>
+                                    <label htmlFor="fld-2" className="block text-xs font-bold uppercase opacity-80 mb-1">Nova Senha (opcional)</label>
                                     <div className="relative">
-                                      <input
+                                      <input id="fld-2"
                                         type={showEditUserPassword ? 'text' : 'password'}
                                         value={editPassword}
                                         onChange={e => setEditPassword(e.target.value)}
@@ -3038,6 +3108,7 @@ export default function App() {
                                           onClick={() => setShowEditUserPassword(prev => !prev)}
                                           className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-500 hover:text-slate-800 transition-colors"
                                           title={showEditUserPassword ? 'Ocultar senha' : 'Ver senha'}
+ aria-label={showEditUserPassword ? 'Ocultar senha' : 'Mostrar senha'}
                                         >
                                           {showEditUserPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                                         </button>
@@ -3046,8 +3117,8 @@ export default function App() {
                                   </div>
 
                                   <div>
-                                    <label className="block text-xs font-bold uppercase opacity-80 mb-1">Perfil</label>
-                                    <select
+                                    <label htmlFor="fld-3" className="block text-xs font-bold uppercase opacity-80 mb-1">Perfil</label>
+                                    <select id="fld-3"
                                       value={editRole}
                                       onChange={e => setEditRole(e.target.value)}
                                       className="w-full px-3.5 py-2.5 border border-inherit bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-[#002554]"
@@ -3064,6 +3135,7 @@ export default function App() {
                                     <div className="inline-flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 flex-nowrap portrait:flex-wrap gap-1 shadow-xs">
                                       <button
                                         type="button"
+                                        aria-pressed={editUserTab === 'standard'}
                                         onClick={() => setEditUserTab('standard')}
                                         className={`flex items-center space-x-2 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
                                           editUserTab === 'standard'
@@ -3077,6 +3149,7 @@ export default function App() {
 
                                       <button
                                         type="button"
+                                        aria-pressed={editUserTab === 'modoProva'}
                                         onClick={() => setEditUserTab('modoProva')}
                                         className={`flex items-center space-x-2 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
                                           editUserTab === 'modoProva'
@@ -3090,6 +3163,7 @@ export default function App() {
 
                                       <button
                                         type="button"
+                                        aria-pressed={editUserTab === 'modoSala'}
                                         onClick={() => setEditUserTab('modoSala')}
                                         className={`flex items-center space-x-2 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
                                           editUserTab === 'modoSala'
@@ -3308,6 +3382,7 @@ export default function App() {
                           <div className="inline-flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 flex-nowrap portrait:flex-wrap gap-1 shadow-xs">
                             <button
                               type="button"
+                              aria-pressed={profileConfigTab === 'standard'}
                               onClick={() => {
                                 setProfileConfigTab('standard')
                                 setActiveNavSection('appsLiberados')
@@ -3323,6 +3398,7 @@ export default function App() {
 
                             <button
                               type="button"
+                              aria-pressed={profileConfigTab === 'modoProva'}
                               onClick={() => {
                                 setProfileConfigTab('modoProva')
                                 setActiveNavSection('modoProva')
@@ -3342,6 +3418,7 @@ export default function App() {
 
                             <button
                               type="button"
+                              aria-pressed={profileConfigTab === 'modoSala'}
                               onClick={() => {
                                 setProfileConfigTab('modoSala')
                                 setActiveNavSection('modoSala')
@@ -3434,7 +3511,9 @@ export default function App() {
                                 <button
                                   type="button"
                                   onClick={() => toggleProfileModoProvaStatus(activeProfile)}
-                                  aria-label="Alternar Modo Prova"
+                                  role="switch"
+                                  aria-checked={isModoProvaActive}
+                                  aria-label="Modo Prova"
                                   title={isModoProvaActive ? `Modo Prova Ativado - Clique para desativar` : `Modo Prova Desativado - Clique para ativar`}
                                   className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${isModoProvaActive
                                     ? (isHighContrast ? 'bg-[#0000FF]' : 'bg-emerald-600')
@@ -3553,7 +3632,9 @@ export default function App() {
                                 <button
                                   type="button"
                                   onClick={() => toggleProfileModoSalaStatus(activeProfile)}
-                                  aria-label="Alternar Modo Sala de Aula"
+                                  role="switch"
+                                  aria-checked={isModoSalaActive}
+                                  aria-label="Modo Sala de Aula"
                                   title={isModoSalaActive ? `Modo Sala Ativado - Clique para desativar` : `Modo Sala Desativado - Clique para ativar`}
                                   className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${isModoSalaActive
                                     ? (isHighContrast ? 'bg-[#0000FF]' : 'bg-emerald-600')
@@ -3690,6 +3771,7 @@ export default function App() {
                       <button
                         type="button"
                         onClick={() => setIsAdminPasswordExpanded(prev => !prev)}
+                        aria-expanded={isAdminPasswordExpanded}
                         className={`flex items-center space-x-1.5 px-3 py-2 text-xs font-bold border rounded-xl transition-all ${
                           isHighContrast
                             ? 'border-[#0000FF] bg-[#FFFF00] text-[#0000FF] hover:bg-[#0000FF] hover:text-[#FFFF00]'
@@ -3714,9 +3796,9 @@ export default function App() {
                         className="max-w-md space-y-3.5"
                       >
                         <div>
-                          <label className="block text-xs font-bold uppercase opacity-80 mb-1">Senha Atual</label>
+                          <label htmlFor="fld-4" className="block text-xs font-bold uppercase opacity-80 mb-1">Senha Atual</label>
                           <div className="relative">
-                            <input
+                            <input id="fld-4"
                               type={showCurrentAdminPassword ? 'text' : 'password'}
                               value={currentAdminPasswordInput}
                               onChange={e => {
@@ -3733,6 +3815,7 @@ export default function App() {
                                 onClick={() => setShowCurrentAdminPassword(prev => !prev)}
                                 className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-500 hover:text-slate-800 transition-colors"
                                 title={showCurrentAdminPassword ? 'Ocultar senha' : 'Ver senha'}
+ aria-label={showCurrentAdminPassword ? 'Ocultar senha' : 'Mostrar senha'}
                               >
                                 {showCurrentAdminPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                               </button>
@@ -3741,9 +3824,9 @@ export default function App() {
                         </div>
 
                         <div>
-                          <label className="block text-xs font-bold uppercase opacity-80 mb-1">Nova Senha</label>
+                          <label htmlFor="fld-5" className="block text-xs font-bold uppercase opacity-80 mb-1">Nova Senha</label>
                           <div className="relative">
-                            <input
+                            <input id="fld-5"
                               type={showNewAdminPassword ? 'text' : 'password'}
                               value={newAdminPasswordInput}
                               onChange={e => {
@@ -3760,6 +3843,7 @@ export default function App() {
                                 onClick={() => setShowNewAdminPassword(prev => !prev)}
                                 className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-500 hover:text-slate-800 transition-colors"
                                 title={showNewAdminPassword ? 'Ocultar senha' : 'Ver senha'}
+ aria-label={showNewAdminPassword ? 'Ocultar senha' : 'Mostrar senha'}
                               >
                                 {showNewAdminPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                               </button>
@@ -3768,9 +3852,9 @@ export default function App() {
                         </div>
 
                         <div>
-                          <label className="block text-xs font-bold uppercase opacity-80 mb-1">Confirmar Nova Senha</label>
+                          <label htmlFor="fld-6" className="block text-xs font-bold uppercase opacity-80 mb-1">Confirmar Nova Senha</label>
                           <div className="relative">
-                            <input
+                            <input id="fld-6"
                               type={showConfirmAdminPassword ? 'text' : 'password'}
                               value={confirmAdminPasswordInput}
                               onChange={e => {
@@ -3787,6 +3871,7 @@ export default function App() {
                                 onClick={() => setShowConfirmAdminPassword(prev => !prev)}
                                 className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-500 hover:text-slate-800 transition-colors"
                                 title={showConfirmAdminPassword ? 'Ocultar senha' : 'Ver senha'}
+ aria-label={showConfirmAdminPassword ? 'Ocultar senha' : 'Mostrar senha'}
                               >
                                 {showConfirmAdminPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                               </button>
@@ -3847,7 +3932,7 @@ export default function App() {
           {/* Modal Dedicado para Criação de Novo Usuário / Aluno */}
           {showCreateUserModal && (
             <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
-              <div className={`border-2 max-w-4xl w-full max-h-[92vh] flex flex-col shadow-2xl ${isHighContrast
+              <div ref={createUserDialogRef} role="dialog" aria-modal="true" aria-labelledby="create-user-title" className={`border-2 max-w-4xl w-full max-h-[92vh] flex flex-col shadow-2xl ${isHighContrast
                 ? 'bg-[#FFFF00] border-4 border-[#0000FF] text-[#0000FF]'
                 : 'bg-white border-[#002554] text-slate-800'
                 }`}>
@@ -3860,7 +3945,7 @@ export default function App() {
                       <Users size={18} />
                     </div>
                     <div>
-                      <h4 className="text-base font-bold leading-tight">Cadastrar Novo Usuário / Aluno</h4>
+                      <h4 id="create-user-title" className="text-base font-bold leading-tight">Cadastrar Novo Usuário / Aluno</h4>
                       <p className="text-[11px] opacity-75 mt-0.5">Defina o nome, permissão e aplicativos permitidos</p>
                     </div>
                   </div>
@@ -3878,10 +3963,10 @@ export default function App() {
                 {/* Corpo do Modal */}
                 <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1">
                   <div>
-                    <label className="block text-xs font-bold uppercase opacity-80 mb-1">
+                    <label htmlFor="fld-7" className="block text-xs font-bold uppercase opacity-80 mb-1">
                       Nome do Usuário / Aluno *
                     </label>
-                    <input
+                    <input id="fld-7"
                       type="text"
                       value={newUserName}
                       onChange={e => setNewUserName(e.target.value)}
@@ -3896,11 +3981,11 @@ export default function App() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div>
-                      <label className="block text-xs font-bold uppercase opacity-80 mb-1">
+                      <label htmlFor="fld-8" className="block text-xs font-bold uppercase opacity-80 mb-1">
                         Senha de Acesso
                       </label>
                       <div className="relative">
-                        <input
+                        <input id="fld-8"
                           type={showNewUserPassword ? 'text' : 'password'}
                           value={newUserPassword}
                           onChange={e => setNewUserPassword(e.target.value)}
@@ -3918,6 +4003,7 @@ export default function App() {
                               isHighContrast ? 'text-[#0000FF] hover:opacity-75' : 'text-slate-500 hover:text-slate-800'
                             }`}
                             title={showNewUserPassword ? 'Ocultar senha' : 'Ver senha'}
+ aria-label={showNewUserPassword ? 'Ocultar senha' : 'Mostrar senha'}
                           >
                             {showNewUserPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                           </button>
@@ -3926,10 +4012,10 @@ export default function App() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold uppercase opacity-80 mb-1">
+                      <label htmlFor="fld-9" className="block text-xs font-bold uppercase opacity-80 mb-1">
                         Perfil de Permissão
                       </label>
-                      <select
+                      <select id="fld-9"
                         value={newUserRole}
                         onChange={e => setNewUserRole(e.target.value)}
                         className={`w-full px-3.5 py-2.5 border text-sm font-semibold focus:outline-none ${isHighContrast
@@ -4028,6 +4114,7 @@ export default function App() {
                       <div className="inline-flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 flex-nowrap portrait:flex-wrap gap-1 shadow-xs">
                         <button
                           type="button"
+                          aria-pressed={newUserTab === 'standard'}
                           onClick={() => setNewUserTab('standard')}
                           className={`flex items-center space-x-2 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
                             newUserTab === 'standard'
@@ -4041,6 +4128,7 @@ export default function App() {
 
                         <button
                           type="button"
+                          aria-pressed={newUserTab === 'modoProva'}
                           onClick={() => setNewUserTab('modoProva')}
                           className={`flex items-center space-x-2 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
                             newUserTab === 'modoProva'
@@ -4054,6 +4142,7 @@ export default function App() {
 
                         <button
                           type="button"
+                          aria-pressed={newUserTab === 'modoSala'}
                           onClick={() => setNewUserTab('modoSala')}
                           className={`flex items-center space-x-2 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
                             newUserTab === 'modoSala'
@@ -4246,6 +4335,7 @@ export default function App() {
               onClick={() => setShowExitModal(false)}
             >
               <div
+                ref={exitDialogRef}
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="exit-modal-title"
@@ -4290,10 +4380,10 @@ export default function App() {
           {/* Modal de Confirmação para Redefinir Padrões de Fábrica */}
           {showFactoryResetModal && (
             <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-              <div className="bg-white dark:bg-slate-900 border-2 border-rose-600 max-w-md w-full p-6 shadow-2xl space-y-4 text-slate-800 dark:text-slate-100">
+              <div ref={factoryResetDialogRef} role="alertdialog" aria-modal="true" aria-labelledby="factory-reset-title" className="bg-white dark:bg-slate-900 border-2 border-rose-600 max-w-md w-full p-6 shadow-2xl space-y-4 text-slate-800 dark:text-slate-100">
                 <div className="flex items-center space-x-3 text-rose-600 pb-3 border-b border-rose-200 dark:border-rose-900">
-                  <AlertTriangle size={24} className="flex-shrink-0" />
-                  <h4 className="text-base font-bold">Implica em perda de informações</h4>
+                  <AlertTriangle size={24} className="flex-shrink-0" aria-hidden="true" />
+                  <h4 id="factory-reset-title" className="text-base font-bold">Implica em perda de informações</h4>
                 </div>
 
                 <p className="text-xs opacity-85 leading-relaxed">
@@ -4337,6 +4427,8 @@ export default function App() {
       className="w-screen h-screen bg-[color:var(--dev-bg)] font-sans font-bold text-[color:var(--dev-fg)] overflow-hidden"
     >
       <main className="h-full flex flex-col gap-2">
+        <h1 className="sr-only">Liber, menu do dispositivo</h1>
+        <p id="device-help" className="sr-only">Use as setas para cima e para baixo para navegar, Enter para abrir ou confirmar, Escape para voltar.</p>
         {['createUserRole', 'editUserRole'].includes(current.id) && (
           <div className="mb-4 text-2xl font-bold border-b-2 border-[color-mix(in_srgb,var(--dev-fg)_30%,transparent)] pb-2">Defina o Perfil:</div>
         )}
@@ -4347,15 +4439,30 @@ export default function App() {
         )}
 
         {current.id !== 'reset' && current.id !== 'deleteUserConfirm' && options.length > 0 && (
-          <nav ref={navRef} className="flex-1 flex flex-col gap-0.5 overflow-auto no-scrollbar" aria-label={headerText}>
-            {options.filter(opt => opt.id !== 'header_apps').map((opt) => {
+          <div
+            key={current.id}
+            id="device-menu"
+            ref={navRef}
+            role="menu"
+            tabIndex={0}
+            aria-label={menuAccessibleName}
+            aria-describedby="device-help"
+            aria-activedescendant={(() => {
+              const visible = options.filter(opt => opt.id !== 'header_apps')
+              const i = visible.findIndex(opt => opt.id === options[current.index]?.id)
+              return i >= 0 ? `device-opt-${i}` : undefined
+            })()}
+            className="flex-1 flex flex-col gap-0.5 overflow-auto no-scrollbar outline-none"
+          >
+            {options.filter(opt => opt.id !== 'header_apps').map((opt, optIndex) => {
               const active = opt.id === options[current.index]?.id
               return (
                 <div
                   ref={active ? activeOptionRef : null}
                   key={opt.id}
-                  role="button"
-                  aria-current={active ? 'true' : undefined}
+                  id={`device-opt-${optIndex}`}
+                  role="menuitem"
+                  aria-haspopup={opt.type === 'submenu' ? 'menu' : undefined}
                   onMouseEnter={() => selectOptionById(opt.id)}
                   onClick={() => {
                     selectOptionById(opt.id)
@@ -4365,11 +4472,10 @@ export default function App() {
                     }`}
                 >
                   <div className="overflow-hidden whitespace-nowrap truncate text-lg leading-snug">{opt.choices && opt.choiceKey ? `${opt.label}: ${getChoiceValue(opt.choiceKey) ?? opt.choices[0]}` : opt.label}</div>
-                  <div className="ml-3 text-xl">{/* icon placeholder */}</div>
                 </div>
               )
             })}
-          </nav>
+          </div>
         )}
 
         {current.id === 'createUserName' && (
@@ -4593,14 +4699,22 @@ export default function App() {
         )}
 
         {message && current.id !== 'reset' && (
-          <div className="text-sm px-4 py-3 rounded-sm text-[color:var(--dev-fg)]">{message}</div>
+          <div role="status" className="text-sm px-4 py-3 rounded-sm text-[color:var(--dev-fg)]">{message}</div>
         )}
 
         {popupMessage && (
           <div className="fixed inset-0 z-50 flex cursor-pointer items-center justify-center bg-black/60" onClick={() => setPopupMessage('')}>
-            <div className="w-11/12 max-w-3xl rounded-2xl border-8 border-[color:var(--dev-fg)] bg-[color:var(--dev-bg)] p-12 text-center text-[color:var(--dev-fg)] shadow-2xl">
-              <div className="text-4xl font-bold leading-snug">{popupMessage}</div>
-              <div className="mt-8 text-2xl font-semibold text-[color:var(--dev-fg)] opacity-80">Pressione Enter, Esc ou clique para fechar.</div>
+            <div
+              id="device-popup"
+              role="alertdialog"
+              aria-modal="true"
+              aria-labelledby="device-popup-text"
+              aria-describedby="device-popup-hint"
+              tabIndex={-1}
+              className="w-11/12 max-w-3xl rounded-2xl border-8 border-[color:var(--dev-fg)] bg-[color:var(--dev-bg)] p-12 text-center text-[color:var(--dev-fg)] shadow-2xl outline-none"
+            >
+              <div id="device-popup-text" className="text-4xl font-bold leading-snug">{popupMessage}</div>
+              <div id="device-popup-hint" className="mt-8 text-2xl font-semibold text-[color:var(--dev-fg)] opacity-80">Pressione Enter, Esc ou clique para fechar.</div>
             </div>
           </div>
         )}

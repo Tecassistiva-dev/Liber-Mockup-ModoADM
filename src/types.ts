@@ -11,6 +11,7 @@ export type Option = {
 export type MenuLevel = {
   id: string
   header: string
+  title?: string
   options: Option[]
 }
 

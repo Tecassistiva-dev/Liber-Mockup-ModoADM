@@ -25,3 +25,9 @@ npm run typecheck  # tsc --noEmit
 - `src/data/defaults.ts` – menu do dispositivo, perfis, usuários e senha padrão de demonstração
 - `src/components/` – `SettingsPanel` (árvore +/−), `AppToggleButton`, `InfoTip`
 - `src/types.ts` – tipos compartilhados
+
+## Acessibilidade
+
+- Menu do dispositivo: `role="menu"` com `aria-activedescendant`; o foco acompanha a troca de nível e os avisos (`alertdialog`), e o nome do menu é anunciado ao entrar.
+- Painel: link "Ir para o conteúdo", título principal, árvore com `aria-expanded`, botões de alternância com `aria-pressed`/`role="switch"`, campos com rótulo associado, avisos em região `aria-live` e diálogos com foco preso e retorno do foco.
+- Respeita `prefers-reduced-motion`.

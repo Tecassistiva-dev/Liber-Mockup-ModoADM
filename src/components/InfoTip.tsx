@@ -47,7 +47,7 @@ export default function InfoTip({ children, label = 'Mais informações', isHigh
       </button>
       {open && (
         <span
-          role="tooltip"
+          role="status"
           className={`absolute top-full z-40 mt-2 w-60 max-w-[75vw] whitespace-normal rounded-lg border-2 p-3 text-left text-xs font-medium normal-case leading-snug shadow-lg ${
             align === 'right' ? 'right-0' : 'left-0'
           } ${isHighContrast ? 'border-[#0000FF] bg-[#FFFF00] text-[#0000FF]' : 'border-[#111827] bg-white text-[#111827]'}`}

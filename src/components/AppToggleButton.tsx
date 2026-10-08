@@ -38,8 +38,9 @@ export default function AppToggleButton({
   return (
     <button
       type="button"
+      role="switch"
+      aria-checked={isActive}
       onClick={onToggle}
-      title={`${label}: ${isActive ? 'Liberado / Ativado' : 'Bloqueado / Desativado'}`}
       className={`group relative flex w-full min-w-0 items-center justify-between gap-3 px-3.5 py-2.5 min-h-[48px] rounded-xl cursor-pointer transition-all duration-200 text-left select-none hover:-translate-y-0.5 active:translate-y-0 ${
         isActive ? activeStyle : inactiveStyle
       }`}

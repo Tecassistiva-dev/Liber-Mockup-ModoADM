@@ -453,7 +453,7 @@ const range = (min: number, max: number) => Array.from({ length: max - min + 1 }
 const choiceOptions = (key: string, label: string, values: string[], levels: MenuLevel[]): Option => {
   levels.push({
     id: `cfgc_${key}`,
-    header: settingsHeader(label),
+    header: settingsHeader(label), title: label,
     options: values.map((value, i) => ({ id: `cfgc_${key}_${i}`, label: value, type: 'action', choiceKey: key }))
   })
   return { id: `cfgc_${key}`, label, type: 'submenu', submenuId: `cfgc_${key}`, choices: values, choiceKey: key }
@@ -492,7 +492,7 @@ function buildSettings(items: SettingItem[], levels: MenuLevel[]): Option[] {
         break
       case 'text':
         // tela de digitação (campo editável) tratada no App
-        levels.push({ id: `cfgt_${item.key}`, header: settingsHeader(item.label), options: [] })
+        levels.push({ id: `cfgt_${item.key}`, header: settingsHeader(item.label), title: item.label, options: [] })
         out.push({ id: `${SETTINGS_TEXT_PREFIX}${item.key}`, label: item.label, type: 'action' })
         break
       case 'confirm': {
@@ -502,20 +502,20 @@ function buildSettings(items: SettingItem[], levels: MenuLevel[]): Option[] {
       }
       case 'wifi':
         // opções montadas na hora (Ligar, Desligar e, se ligado, as redes)
-        levels.push({ id: 'cfgd_wifi', header: settingsHeader(item.label), options: [] })
+        levels.push({ id: 'cfgd_wifi', header: settingsHeader(item.label), title: item.label, options: [] })
         out.push({ id: 'cfgd_wifi_entry', label: item.label, type: 'submenu', submenuId: 'cfgd_wifi' })
         break
       case 'placeholder':
         out.push({ id: `${SETTINGS_PLACEHOLDER_PREFIX}${item.id}`, label: item.label, type: 'action' })
         break
       case 'deviceList':
-        levels.push({ id: `cfgd_${item.id}`, header: settingsHeader(item.label), options: [] })
+        levels.push({ id: `cfgd_${item.id}`, header: settingsHeader(item.label), title: item.label, options: [] })
         out.push(item.id === 'btScan'
           ? { id: `${SETTINGS_CONN_PREFIX}bluetooth|scan|`, label: item.label, type: 'action' }
           : { id: `cfgd_${item.id}_entry`, label: item.label, type: 'submenu', submenuId: `cfgd_${item.id}` })
         break
       case 'group': {
-        const level: MenuLevel = { id: `cfgg_${item.id}`, header: settingsHeader(item.label), options: [] }
+        const level: MenuLevel = { id: `cfgg_${item.id}`, header: settingsHeader(item.label), title: item.label, options: [] }
         levels.push(level)
         level.options = buildSettings(item.items, levels)
         out.push({ id: `cfgg_${item.id}_entry`, label: item.label, type: 'submenu', submenuId: level.id })

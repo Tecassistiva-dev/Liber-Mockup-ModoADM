@@ -311,13 +311,13 @@ export default function SettingsPanel({
       <>
         {leaf('wifiEstado', 'Wi-Fi', chips(
           <>
-            <button type="button" className={optionBtn(on)} onClick={() => onSet('wifi', 'Ligado')}>Ligar</button>
-            <button type="button" className={optionBtn(!on)} onClick={() => onSet('wifi', 'Desligado')}>Desligar</button>
+            <button type="button" aria-pressed={on} className={optionBtn(on)} onClick={() => onSet('wifi', 'Ligado')}>Ligar</button>
+            <button type="button" aria-pressed={!on} className={optionBtn(!on)} onClick={() => onSet('wifi', 'Desligado')}>Desligar</button>
           </>
         ), { summary: on ? 'Ligado' : 'Desligado' })}
         {leaf('wifiRedes', 'Redes Wi-Fi', on
           ? chips(WIFI_NETWORKS.map(name => (
-            <button key={name} type="button" className={optionBtn(connected === name)} onClick={() => runConnection('wifi', 'connect', name)}>
+            <button key={name} type="button" aria-pressed={connected === name} className={optionBtn(connected === name)} onClick={() => runConnection('wifi', 'connect', name)}>
               {connected === name && <Check size={14} strokeWidth={3} />}
               {name}
             </button>
@@ -362,7 +362,7 @@ export default function SettingsPanel({
               A procurar dispositivos Bluetooth…
             </p>
           ) : chips(BLUETOOTH_FOUND_DEVICES.map(name => (
-            <button key={name} type="button" className={optionBtn(connected === name)} onClick={() => runConnection('bluetooth', 'pair', name)}>
+            <button key={name} type="button" aria-pressed={connected === name} className={optionBtn(connected === name)} onClick={() => runConnection('bluetooth', 'pair', name)}>
               {paired.includes(name) && <Check size={14} strokeWidth={3} />}
               {name}
             </button>
@@ -372,7 +372,7 @@ export default function SettingsPanel({
           paired.length === 0
             ? <p className="text-xs opacity-70">Nenhum dispositivo pareado.</p>
             : chips(paired.map(name => (
-              <button key={name} type="button" className={optionBtn(connected === name)} onClick={() => runConnection('bluetooth', 'toggle', name)}>
+              <button key={name} type="button" aria-pressed={connected === name} className={optionBtn(connected === name)} onClick={() => runConnection('bluetooth', 'toggle', name)}>
                 {connected === name && <Check size={14} strokeWidth={3} />}
                 {name}
               </button>
@@ -393,7 +393,7 @@ export default function SettingsPanel({
         }
         const current = values[item.key]
         return leaf(item.key, item.label, chips(item.values.map(v => (
-          <button key={v} type="button" onClick={() => onSet(item.key, v)} className={optionBtn(current === v)}>{v}</button>
+          <button key={v} type="button" onClick={() => onSet(item.key, v)} aria-pressed={current === v} className={optionBtn(current === v)}>{v}</button>
         ))), { summary: current, root })
       }
       case 'number': {
